@@ -30,8 +30,8 @@ class ICPViewerCanvas(BasicMeshCanvas):
         self.displayMeshFaces = True
         self.displayMeshPoints = True
         self.displayCorrespondences = True
-        self.CX = np.array([[0, 0, 0]]).T #X Centroid
-        self.CY = np.array([[0, 0, 0]]).T #Y Centroid
+        self.Cx = np.array([[0, 0, 0]]).T #X Centroid
+        self.Cy = np.array([[0, 0, 0]]).T #Y Centroid
         self.currRx = np.eye(3) #Current rotation
         self.RxList = []
         self.corridx = np.zeros([]) #Current correspondences
@@ -55,7 +55,7 @@ class ICPViewerCanvas(BasicMeshCanvas):
     
     #Move the camera to look at the Y mesh (default)
     def viewYMesh(self, evt):
-        V = self.ymesh.getVerticesCols() - self.CY
+        V = self.ymesh.getVerticesCols() - self.Cy
         bbox = BBox3D()
         bbox.fromPoints(V.T)
         self.bbox = bbox
@@ -65,7 +65,7 @@ class ICPViewerCanvas(BasicMeshCanvas):
     #Move the camera to look at the X mesh, taking into consideration
     #current transformation
     def viewXMesh(self, evt):
-        V = self.xmesh.getVerticesCols() - self.CX
+        V = self.xmesh.getVerticesCols() - self.Cx
         V = self.currRx.dot(V)
         bbox = BBox3D()
         bbox.fromPoints(V.T)
@@ -75,20 +75,21 @@ class ICPViewerCanvas(BasicMeshCanvas):
     
     def updateCorrBuffer(self):
         print "Making new correspondence buffer"
-        X = self.xmesh.VPos
-        Y = self.ymesh.VPos
+        X = self.xmesh.VPos.T - self.Cx
+        X = self.currRx.dot(X)
+        Y = self.ymesh.VPos.T - self.Cy
         idx = self.corridx
         N = idx.size
         C = np.zeros((N*2, 3))
-        C[0::2, :] = X
-        C[1::2, :] = Y[idx, :]
+        C[0::2, :] = X.T
+        C[1::2, :] = Y.T[idx, :]
         self.corridxbuff = vbo.VBO(np.array(C, dtype=np.float32))
         print "Finished making new correspondence buffer"
     
     #Call the students' centroid centering code and update the display
     def centerOnCentroids(self, evt):
-        self.CX = getCentroid(self.xmesh.getVerticesCols())
-        self.CY = getCentroid(self.ymesh.getVerticesCols())
+        self.Cx = getCentroid(self.xmesh.getVerticesCols())
+        self.Cy = getCentroid(self.ymesh.getVerticesCols())
         if self.corridxbuff: #If correspondences have already been found
             self.updateCorrBuffer()
         self.viewYMesh(None)
@@ -96,7 +97,17 @@ class ICPViewerCanvas(BasicMeshCanvas):
     def findCorrespondences(self, evt):
         X = self.xmesh.getVerticesCols()
         Y = self.ymesh.getVerticesCols()
-        self.corridx = getCorrespondences(X, Y, self.CX, self.CY, self.currRx)
+        self.corridx = getCorrespondences(X, Y, self.Cx, self.Cy, self.currRx)
+        self.updateCorrBuffer()
+        self.Refresh()
+    
+    def doProcrustes(self, evt):
+        if not self.corridxbuff:
+            wx.MessageBox('Must compute correspondences before doing procrustes!', 'Error', wx.OK | wx.ICON_ERROR)
+            return
+        X = self.xmesh.getVerticesCols()
+        Y = self.ymesh.getVerticesCols()
+        self.currRx = getProcrustesAlignment(X, Y, self.Cx, self.Cy, self.corridx)
         self.updateCorrBuffer()
         self.Refresh()
 
@@ -139,7 +150,7 @@ class ICPViewerCanvas(BasicMeshCanvas):
         
         #Draw the Y mesh
         TYC = np.eye(4)
-        TYC[0:3, 3] = -self.CY.flatten()
+        TYC[0:3, 3] = -self.Cy.flatten()
         glPushMatrix()
         glMultMatrixd((TYC.T).flatten())
         self.ymesh.renderGL(self.displayMeshEdges, False, self.displayMeshFaces, False, False, True, False)
@@ -153,7 +164,7 @@ class ICPViewerCanvas(BasicMeshCanvas):
         Rx[0:3, 0:3] = self.currRx
         #Translation to move X to its centroid
         TXC = np.eye(4)
-        TXC[0:3, 3] = -self.CX.flatten()
+        TXC[0:3, 3] = -self.Cx.flatten()
         T = Rx.dot(TXC)
         glPushMatrix()
         #Note: OpenGL is column major
@@ -237,7 +248,9 @@ class ICPViewerFrame(wx.Frame):
         CorrespButton = wx.Button(self, -1, "Find Correspondences")
         self.Bind(wx.EVT_BUTTON, self.glcanvas.findCorrespondences, CorrespButton)
         self.rightPanel.Add(CorrespButton, 0, wx.EXPAND)
-
+        ProcrustesButton = wx.Button(self, -1, "Do Procrustes Alignment")
+        self.Bind(wx.EVT_BUTTON, self.glcanvas.doProcrustes, ProcrustesButton)
+        self.rightPanel.Add(ProcrustesButton, 0, wx.EXPAND)        
 
         #Finally add the two main panels to the sizer        
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)

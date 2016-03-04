@@ -19,7 +19,8 @@ def getCentroid(PC):
 #Cx: 3 x 1 matrix of the centroid of X
 #Cy: 3 x 1 matrix of the centroid of Y
 #Returns:
-#idx: An array of size N which stores the indices 
+#idx: An array of size M which stores the indices of the corresponding
+#points in Y to every point in X
 def getCorrespondences(X, Y, Cx, Cy, Ry):
     print "TODO"
     #TODO: CHANGE THIS!  This is mapping all points in X to the 
@@ -35,10 +36,12 @@ def getCorrespondences(X, Y, Cx, Cy, Ry):
 #Y: 3 x N matrix of points in Y (the target point cloud)
 #Cx: 3 x 1 matrix of the centroid of X
 #Cy: 3 x 1 matrix of the centroid of Y
+#idx: An array of size M which stores the indices of the corresponding
+#points in Y to every point in X
 #Returns:
 #Rx: A 3x3 rotation matrix to rotate and align X
 #with Y once they have been centered on their centroids
-def getProcrustesAlignment(X, Y, Cx, Cy):
+def getProcrustesAlignment(X, Y, Cx, Cy, idx):
     print "TODO"
     #TODO: CHANGE THIS!  It should not be returning the identity
     #matrix each time, as it currently is
@@ -57,7 +60,7 @@ def getProcrustesAlignment(X, Y, Cx, Cy):
 #what the ICP algorithm did
 def doICP(X, Y):
     print "TODO"
-    RxList = []
+    RxList = [np.eye(3)]
     #Return centroids of X and Y, as well as a list of rotation matrices
     #that the algorithm produces as it iterates
-    return (getCentroid(X), getCentroid(Y), MatrixList)
+    return (getCentroid(X), getCentroid(Y), RxList)

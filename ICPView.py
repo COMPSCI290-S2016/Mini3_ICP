@@ -19,7 +19,7 @@ import math
 import time
 from time import sleep
 import matplotlib.pyplot as plt
-from ICPMySol import *
+from ICP import *
 
 class ICPViewerCanvas(BasicMeshCanvas):
     def __init__(self, parent, xmesh, ymesh):

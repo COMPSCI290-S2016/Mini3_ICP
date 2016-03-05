@@ -19,7 +19,7 @@ import math
 import time
 from time import sleep
 import matplotlib.pyplot as plt
-from ICP import *
+from ICPMySol import *
 
 class ICPViewerCanvas(BasicMeshCanvas):
     def __init__(self, parent, xmesh, ymesh):
@@ -43,6 +43,7 @@ class ICPViewerCanvas(BasicMeshCanvas):
         self.animating = False
         self.frameIdx = 0
         self.nearDist = 0.01
+        self.farDist = 1000.0
         self.outputPrefixTxt = None
     
     def displayMeshFacesCheckbox(self, evt):
@@ -93,7 +94,6 @@ class ICPViewerCanvas(BasicMeshCanvas):
         self.Refresh()
     
     def updateCorrBuffer(self):
-        print "Making new correspondence buffer"
         X = self.xmesh.VPos.T - self.currCx
         X = self.currRx.dot(X)
         Y = self.ymesh.VPos.T - self.currCy
@@ -103,7 +103,6 @@ class ICPViewerCanvas(BasicMeshCanvas):
         C[0::2, :] = X.T
         C[1::2, :] = Y.T[idx, :]
         self.corridxbuff = vbo.VBO(np.array(C, dtype=np.float32))
-        print "Finished making new correspondence buffer"
     
     #Call the students' centroid centering code and update the display
     def centerOnCentroids(self, evt):

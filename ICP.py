@@ -7,8 +7,8 @@ import numpy as np
 #PC: 3 x N matrix of points in a point cloud
 #Returns: A 3 x 1 matrix of the centroid of the point cloud
 def getCentroid(PC):
-    print "TODO"
-    return np.zeros((3, 1))
+    #TODO: Finish this
+    return np.zeros((3, 1)) #Dummy value
 
 #Purpose: Given an estimate of the aligning matrix Rx that aligns
 #X to Y, as well as the centroids of those two point clouds, to
@@ -17,16 +17,13 @@ def getCentroid(PC):
 #X: 3 x M matrix of points in X
 #Y: 3 x N matrix of points in Y (the target point cloud)
 #Cx: 3 x 1 matrix of the centroid of X
-#Cy: 3 x 1 matrix of the centroid of Y
+#Cy: 3 x 1 matrix of the centroid of corresponding points in Y
+#Rx: Current estimate of rotation matrix for X
 #Returns:
-#idx: An array of size M which stores the indices of the corresponding
-#points in Y to every point in X
-def getCorrespondences(X, Y, Cx, Cy, Ry):
-    print "TODO"
-    #TODO: CHANGE THIS!  This is mapping all points in X to the 
-    #first point of Y currently
-    idx = np.zeros(X.shape[0])
-    return idx
+#idx: An array of size N which stores the indices 
+def getCorrespondences(X, Y, Cx, Cy, Rx):
+    #TODO: Update this: Right now everything maps to the first point in Y
+    return np.zeros(X.shape[1], dtype=np.int64) #dummy value
 
 #Purpose: Given correspondences between two point clouds, to center
 #them on their centroids and compute the Procrustes alignment to
@@ -34,18 +31,18 @@ def getCorrespondences(X, Y, Cx, Cy, Ry):
 #Inputs:
 #X: 3 x M matrix of points in X
 #Y: 3 x N matrix of points in Y (the target point cloud)
-#Cx: 3 x 1 matrix of the centroid of X
-#Cy: 3 x 1 matrix of the centroid of Y
-#idx: An array of size M which stores the indices of the corresponding
-#points in Y to every point in X
 #Returns:
-#Rx: A 3x3 rotation matrix to rotate and align X
-#with Y once they have been centered on their centroids
-def getProcrustesAlignment(X, Y, Cx, Cy, idx):
-    print "TODO"
-    #TODO: CHANGE THIS!  It should not be returning the identity
-    #matrix each time, as it currently is
-    return np.eye(3)
+#A Tuple (Cx, Cy, Rx):
+#Cx: 3 x 1 matrix of the centroid of X
+#Cy: 3 x 1 matrix of the centroid of corresponding points in Y
+#Rx: A 3x3 rotation matrix to rotate and align X to Y after
+#they have both been centered on their centroids Cx and Cy
+def getProcrustesAlignment(X, Y, idx):
+    #TODO: Finish this: These are all dummy values
+    Cx = np.zeros((3, 1))
+    Cy = np.zeros((3, 1))
+    R = np.eye(3) #3x3 Identity matrix (trivial rotation...needs to be updated)
+    return (Cx, Cy, R)    
 
 #Purpose: To implement the loop which ties together correspondence finding
 #and procrustes alignment to implment the interative closest points algorithm
@@ -53,14 +50,18 @@ def getProcrustesAlignment(X, Y, Cx, Cy, idx):
 #Inputs:
 #X: 3 x M matrix of points in X
 #Y: 3 x N matrix of points in Y (the target point cloud)
-#Returns: A tuple of (X centroid, Y centroid, RxList),
-#where RxList is a list of rotations matrices Rx that are produced
-#as the algorithm runs
+#MaxIters: Maximum number of iterations to perform, regardless of convergence
+#Returns: A tuple of (CxList, CyList, RxList):
+#CxList: A list of centroids of X estimated in each iteration (these
+#should actually be the same each time)
+#CyList: A list of the centroids of corresponding points in Y at each 
+#iteration (these might be different as correspondences change)
+#RxList: A list of rotations matrices Rx that are produced at each iteration
 #This is all of the information needed to animate exactly
 #what the ICP algorithm did
-def doICP(X, Y):
-    print "TODO"
+def doICP(X, Y, MaxIters):
+    CxList = [np.zeros((3, 1))]
+    CyList = [np.zeros((3, 1))]
     RxList = [np.eye(3)]
-    #Return centroids of X and Y, as well as a list of rotation matrices
-    #that the algorithm produces as it iterates
-    return (getCentroid(X), getCentroid(Y), RxList)
+    #TODO: Fill the rest of this in    
+    return (CxList, CyList, RxList)

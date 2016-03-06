@@ -319,18 +319,6 @@ class ICPViewerCanvas(object):
         return 0
     
     def initGL(self):
-#        
-#        #Buttons to compute and test ICP in its entirety
-#        self.rightPanel.Add(wx.StaticText(self, label=""))
-#        self.rightPanel.Add(wx.StaticText(self, label=""))
-#        self.rightPanel.Add(wx.StaticText(self, label="ICP Algorithm Full"))
-#        ComputeICPButton = wx.Button(self, -1, "Compute ICP")
-#        self.Bind(wx.EVT_BUTTON, self.glcanvas.doICP, ComputeICPButton)
-#        self.rightPanel.Add(ComputeICPButton, 0, wx.EXPAND)
-#        AnimateICPButton = wx.Button(self, -1, "Animate ICP")
-#        self.Bind(wx.EVT_BUTTON, self.glcanvas.doAnimation, AnimateICPButton)
-#        self.rightPanel.Add(AnimateICPButton, 0, wx.EXPAND)
-
         glutInit('')
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
         glutInitWindowSize(self.GLUTwindow_width, self.GLUTwindow_height)

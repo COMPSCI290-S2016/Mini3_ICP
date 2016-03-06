@@ -78,7 +78,6 @@ class ICPViewerCanvas(object):
         y = self.GLUTwindow_height - y
         self.GLUTmouse[0] = x
         self.GLUTmouse[1] = y
-        self.GLUTmodifiers = glutGetModifiers()
 
     def GLUTMouse(self, button, state, x, y):
         buttonMap = {GLUT_LEFT_BUTTON:0, GLUT_MIDDLE_BUTTON:1, GLUT_RIGHT_BUTTON:2, 3:3, 4:4}

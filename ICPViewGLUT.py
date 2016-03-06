@@ -20,13 +20,14 @@ import matplotlib.pyplot as plt
 from ICP import *
 
 class ICPViewerCanvas(object):
-    def __init__(self, xmesh, ymesh):
+    def __init__(self, xmesh, ymesh, MaxIters = 200, outputPrefix = ""):
         #GLUT Variables
         self.GLUTwindow_height = 800
         self.GLUTwindow_width = 800
         self.GLUTmouse = [0, 0]
         self.GLUTButton = [0, 0, 0, 0, 0]
         self.GLUTModifiers = 0
+        self.keys = {}
         self.bbox = BBox3D()
         
         self.xmesh = xmesh
@@ -43,13 +44,13 @@ class ICPViewerCanvas(object):
         self.RxList = []
         self.corridx = np.zeros([]) #Current correspondences
         self.corridxbuff = None #Correspondence vertex buffer
-        self.maxItersTxt = None
+        self.MaxIters = MaxIters
+        self.outputPrefix = outputPrefix
         #Animation variables
         self.animating = False
         self.frameIdx = 0
         self.nearDist = 0.01
         self.farDist = 1000.0
-        self.outputPrefixTxt = None
     
     def GLUTResize(self, w, h):
         glViewport(0, 0, w, h)
@@ -80,27 +81,47 @@ class ICPViewerCanvas(object):
         self.handleMouseStuff(x, y)
         dX = self.GLUTmouse[0] - lastX
         dY = self.GLUTmouse[1] - lastY
-        if self.GLUTButton[2] == 1:
-            self.camera.zoom(-dY)#Want to zoom in as the mouse goes up
-        elif self.GLUTButton[1] == 1:
+        if self.GLUTButton[1] == 1:
             self.camera.translate(dX, dY)
         else:
-            self.camera.orbitLeftRight(dX)
-            self.camera.orbitUpDown(dY)
+            zooming = False
+            if 'z' in self.keys:
+                #Want to zoom in as the mouse goes up
+                if self.keys['z']:
+                    self.camera.zoom(-dY)
+                    zooming = True
+            elif 'Z' in self.keys:
+                #Want to zoom in as the mouse goes up
+                if self.keys['Z']:
+                    self.camera.zoom(-dY)
+                    zooming = True
+            if not zooming:
+                self.camera.orbitLeftRight(dX)
+                self.camera.orbitUpDown(dY)
+        glutPostRedisplay()
+
+    def GLUTKeyboard(self, key, x, y):
+        self.handleMouseStuff(x, y)
+        self.keys[key] = True
         glutPostRedisplay()
     
-    def displayMeshFacesCheckbox(self, evt):
-        self.displayMeshFaces = evt.Checked()
+    def GLUTKeyboardUp(self, key, x, y):
+        self.handleMouseStuff(x, y)
+        self.keys[key] = False
+        if key in ['x', 'X']:
+            self.viewXMesh()
+        elif key in ['y', 'Y']:
+            self.viewYMesh()
+        elif key in ['p', 'P']:
+            self.displayMeshPoints = not self.displayMeshPoints
+        elif key in ['e', 'E']:
+            self.displayMeshEdges = not self.displayMeshEdges
+        elif key in ['f', 'F']:
+            self.displayMeshFaces = not self.displayMeshFaces
+        elif key in ['c', 'C']:
+            self.displayCorrespondences = not self.displayCorrespondences
         glutPostRedisplay()
 
-    def displayMeshPointsCheckbox(self, evt):
-        self.displayMeshPoints = evt.Checked()
-        glutPostRedisplay()
-
-    def displayMeshEdgesCheckbox(self, evt):
-        self.displayMeshEdges = evt.Checked()
-        glutPostRedisplay()
-        
     def displayCorrespondencesCheckbox(self, evt):
         self.displayCorrespondences = evt.Checked()
         glutPostRedisplay()
@@ -124,16 +145,26 @@ class ICPViewerCanvas(object):
         return (xbbox, ybbox)
     
     #Move the camera to look at the Y mesh (default)
-    def viewYMesh(self, evt):
+    def viewYMesh(self):
         (xbbox, ybbox) = self.getBBoxs()
         self.camera.centerOnBBox(ybbox, theta = -math.pi/2, phi = math.pi/2)
         glutPostRedisplay()
 
     #Move the camera to look at the X mesh, taking into consideration
     #current transformation
-    def viewXMesh(self, evt):
+    def viewXMesh(self):
         (xbbox, ybbox) = self.getBBoxs()
         self.camera.centerOnBBox(xbbox, theta = -math.pi/2, phi = math.pi/2)
+        glutPostRedisplay()
+    
+    def GLUTSpecial(self, key, x, y):
+        self.handleMouseStuff(x, y)
+        self.keys[key] = True
+        glutPostRedisplay()
+    
+    def GLUTSpecialUp(self, key, x, y):
+        self.handleMouseStuff(x, y)
+        self.keys[key] = False
         glutPostRedisplay()
     
     def updateCorrBuffer(self):
@@ -148,21 +179,21 @@ class ICPViewerCanvas(object):
         self.corridxbuff = vbo.VBO(np.array(C, dtype=np.float32))
     
     #Call the students' centroid centering code and update the display
-    def centerOnCentroids(self, evt):
+    def centerOnCentroids(self):
         self.currCx = getCentroid(self.xmesh.getVerticesCols())
         self.currCy = getCentroid(self.ymesh.getVerticesCols())
         if self.corridxbuff: #If correspondences have already been found
             self.updateCorrBuffer()
-        self.viewYMesh(None)
+        self.viewYMesh()
 
-    def findCorrespondences(self, evt):
+    def findCorrespondences(self):
         X = self.xmesh.getVerticesCols()
         Y = self.ymesh.getVerticesCols()
         self.corridx = getCorrespondences(X, Y, self.currCx, self.currCy, self.currRx)
         self.updateCorrBuffer()
         glutPostRedisplay()
     
-    def doProcrustes(self, evt):
+    def doProcrustes(self):
         if not self.corridxbuff:
             wx.MessageBox('Must compute correspondences before doing procrustes!', 'Error', wx.OK | wx.ICON_ERROR)
             return
@@ -172,18 +203,15 @@ class ICPViewerCanvas(object):
         self.updateCorrBuffer()
         glutPostRedisplay()
 
-    def doICP(self, evt):
+    def doICP(self):
         X = self.xmesh.getVerticesCols()
         Y = self.ymesh.getVerticesCols()
-        MaxIters = 200
-        if self.maxItersTxt:
-            MaxIters = int(self.maxItersTxt.GetValue())
-        (self.CxList, self.CyList, self.RxList) = doICP(X, Y, MaxIters)
+        (self.CxList, self.CyList, self.RxList) = doICP(X, Y, self.MaxIters)
         self.currRx = self.RxList[-1]
         self.corridxbuff = None
-        self.viewYMesh(None)
+        self.viewYMesh()
 
-    def doAnimation(self, evt):
+    def doAnimation(self):
         if len(self.RxList) == 0:
             wx.MessageBox('Must compute ICP before playing animation!', 'Error', wx.OK | wx.ICON_ERROR)
             return
@@ -225,7 +253,7 @@ class ICPViewerCanvas(object):
         if np.isnan(self.camera.eye[0]):
             #TODO: Patch for a strange bug that I can't quite track down
             #where camera eye is initially NaNs (likely a race condition)
-            self.viewYMesh(None)
+            self.viewYMesh()
         self.setupPerspectiveMatrix(self.nearDist, self.farDist)
         
         glClearColor(0.0, 0.0, 0.0, 0.0)
@@ -273,10 +301,9 @@ class ICPViewerCanvas(object):
             self.drawLines(self.corridxbuff, self.xmesh.VPos.shape[0])
         
         if self.animating:
-            if self.outputPrefixTxt and not(self.outputPrefixTxt.GetValue() == ""):
+            if not(self.outputPrefix == ""):
                 #Ouptut screenshots
-                prefix = self.outputPrefixTxt.GetValue()
-                saveImageGL(self, "%s%i.png"%(prefix, self.frameIdx))
+                saveImageGL(self, "%s%i.png"%(prefix, self.outputPrefix))
             self.frameIdx += 1
             if self.frameIdx == len(self.RxList):
                 self.animating = False
@@ -287,56 +314,11 @@ class ICPViewerCanvas(object):
                 glutPostRedisplay()
         glutSwapBuffers()
 
-    def initGL(self):        
-        
-#        #Buttons to go to a default view
-#        viewPanel = wx.BoxSizer(wx.HORIZONTAL)
-#        YmeshButton = wx.Button(self, -1, "Y Mesh")
-#        self.Bind(wx.EVT_BUTTON, self.glcanvas.viewYMesh, YmeshButton)
-#        viewPanel.Add(YmeshButton, 0, wx.EXPAND)
-#        XMeshButton = wx.Button(self, -1, "X Mesh")
-#        self.Bind(wx.EVT_BUTTON, self.glcanvas.viewXMesh, XMeshButton)
-#        viewPanel.Add(XMeshButton, 0, wx.EXPAND)
-#        self.rightPanel.Add(wx.StaticText(self, label="Views"), 0, wx.EXPAND)
-#        self.rightPanel.Add(viewPanel, 0, wx.EXPAND)
-#        
-#        #Checkboxes for displaying data
-#        self.rightPanel.Add(wx.StaticText(self, label=""))
-#        self.rightPanel.Add(wx.StaticText(self, label=""))
-#        self.rightPanel.Add(wx.StaticText(self, label="Display Options"), 0, wx.EXPAND)
-#        self.displayMeshFacesCheckbox = wx.CheckBox(self, label = "Display Mesh Faces")
-#        self.displayMeshFacesCheckbox.SetValue(True)
-#        self.Bind(wx.EVT_CHECKBOX, self.glcanvas.displayMeshFacesCheckbox, self.displayMeshFacesCheckbox)
-#        self.rightPanel.Add(self.displayMeshFacesCheckbox, 0, wx.EXPAND)
-#        
-#        self.displayMeshPointsCheckbox = wx.CheckBox(self, label = "Display Mesh Points")
-#        self.displayMeshPointsCheckbox.SetValue(True)
-#        self.Bind(wx.EVT_CHECKBOX, self.glcanvas.displayMeshPointsCheckbox, self.displayMeshPointsCheckbox)
-#        self.rightPanel.Add(self.displayMeshPointsCheckbox, 0, wx.EXPAND)
-
-#        self.displayMeshEdgesCheckbox = wx.CheckBox(self, label = "Display Mesh Edges")
-#        self.displayMeshEdgesCheckbox.SetValue(False)
-#        self.Bind(wx.EVT_CHECKBOX, self.glcanvas.displayMeshEdgesCheckbox, self.displayMeshEdgesCheckbox)
-#        self.rightPanel.Add(self.displayMeshEdgesCheckbox, 0, wx.EXPAND)
-
-#        self.displayCorrespondencesCheckbox = wx.CheckBox(self, label = "Display Correspondences")
-#        self.displayCorrespondencesCheckbox.SetValue(True)
-#        self.Bind(wx.EVT_CHECKBOX, self.glcanvas.displayCorrespondencesCheckbox, self.displayCorrespondencesCheckbox)
-#        self.rightPanel.Add(self.displayCorrespondencesCheckbox, 0, wx.EXPAND)
-
-#        #Buttons to test ICP algorithm step by step
-#        self.rightPanel.Add(wx.StaticText(self, label=""))
-#        self.rightPanel.Add(wx.StaticText(self, label=""))
-#        self.rightPanel.Add(wx.StaticText(self, label="ICP Algorithm Step By Step"))
-#        CentroidButton = wx.Button(self, -1, "Center Meshes on Centroids")
-#        self.Bind(wx.EVT_BUTTON, self.glcanvas.centerOnCentroids, CentroidButton)
-#        self.rightPanel.Add(CentroidButton, 0, wx.EXPAND)
-#        CorrespButton = wx.Button(self, -1, "Find Correspondences")
-#        self.Bind(wx.EVT_BUTTON, self.glcanvas.findCorrespondences, CorrespButton)
-#        self.rightPanel.Add(CorrespButton, 0, wx.EXPAND)
-#        ProcrustesButton = wx.Button(self, -1, "Do Procrustes Alignment")
-#        self.Bind(wx.EVT_BUTTON, self.glcanvas.doProcrustes, ProcrustesButton)
-#        self.rightPanel.Add(ProcrustesButton, 0, wx.EXPAND)        
+    def dmenu(self, item):
+        self.menudict[item]()
+        return 0
+    
+    def initGL(self):
 #        
 #        #Buttons to compute and test ICP in its entirety
 #        self.rightPanel.Add(wx.StaticText(self, label=""))
@@ -348,22 +330,6 @@ class ICPViewerCanvas(object):
 #        AnimateICPButton = wx.Button(self, -1, "Animate ICP")
 #        self.Bind(wx.EVT_BUTTON, self.glcanvas.doAnimation, AnimateICPButton)
 #        self.rightPanel.Add(AnimateICPButton, 0, wx.EXPAND)
-#        self.rightPanel.Add(wx.StaticText(self, label="Maximum Iterations"))  
-#        self.glcanvas.maxItersTxt = wx.TextCtrl(self)
-#        self.glcanvas.maxItersTxt.SetValue("200")
-#        self.rightPanel.Add(self.glcanvas.maxItersTxt)
-#        self.rightPanel.Add(wx.StaticText(self, label="Output Prefix"))  
-#        self.glcanvas.outputPrefixTxt = wx.TextCtrl(self)
-#        self.rightPanel.Add(self.glcanvas.outputPrefixTxt)
-#        
-#        #Finally add the two main panels to the sizer        
-#        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
-#        self.sizer.Add(self.glcanvas, 2, wx.EXPAND)
-#        self.sizer.Add(self.rightPanel, 0, wx.EXPAND)
-#        
-#        self.SetSizer(self.sizer)
-#        self.Layout()
-#        self.glcanvas.Show()
 
         glutInit('')
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
@@ -372,10 +338,10 @@ class ICPViewerCanvas(object):
         glutCreateWindow('ICP Viewer')
         glutReshapeFunc(self.GLUTResize)
         glutDisplayFunc(self.repaint)
-        #glutKeyboardFunc(self.GLUTKeyboard)
-        #glutKeyboardUpFunc(self.GLUTKeyboardUp)
-        #glutSpecialFunc(self.GLUTSpecial)
-        #glutSpecialUpFunc(self.GLUTSpecialUp)
+        glutKeyboardFunc(self.GLUTKeyboard)
+        glutKeyboardUpFunc(self.GLUTKeyboardUp)
+        glutSpecialFunc(self.GLUTSpecial)
+        glutSpecialUpFunc(self.GLUTSpecialUp)
         glutMouseFunc(self.GLUTMouse)
         glutMotionFunc(self.GLUTMotion)
         
@@ -390,13 +356,38 @@ class ICPViewerCanvas(object):
         
         glEnable(GL_DEPTH_TEST)
         
+        #Make menus
+        (VOID, CENTER_ON_CENTROIDS, FIND_CORRESPONDENCES, DO_PROCRUSTES, DO_ICP, ANIMATE_ICP) = (0, 1, 2, 3, 4, 5)
+        self.menudict = {CENTER_ON_CENTROIDS:self.centerOnCentroids, FIND_CORRESPONDENCES:self.findCorrespondences, DO_PROCRUSTES:self.doProcrustes, DO_ICP:self.doICP, ANIMATE_ICP:self.doAnimation}
+        
+        stepByStepMenu = glutCreateMenu(self.dmenu)
+        glutAddMenuEntry("Center On Centroids", CENTER_ON_CENTROIDS)
+        glutAddMenuEntry("Find Correspondences", FIND_CORRESPONDENCES)
+        glutAddMenuEntry("Do Procrustes", DO_PROCRUSTES)
+        
+        
+        icpMenu = glutCreateMenu(self.dmenu)
+        glutAddMenuEntry("Compute ICP", DO_ICP)
+        glutAddMenuEntry("Animate ICP", ANIMATE_ICP)
+        
+        globalMenu = glutCreateMenu(self.dmenu)
+        glutAddSubMenu("ICP Step By Step", stepByStepMenu)
+        glutAddSubMenu("ICP Algorithm Full", icpMenu)
+        glutAttachMenu(GLUT_RIGHT_BUTTON)
+        
         glutMainLoop()
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print "Usage: python ICPViewer.py <mesh to align file> <target mesh file>"
+        print "Usage: python ICPViewerGLUT.py <mesh to align file> <target mesh file> [Maximum Number of Iterations] [Output File Prefix]"
         sys.exit(0)
     (xmeshfile, ymeshfile) = (sys.argv[1], sys.argv[2])
+    MaxIters = 200
+    if len(argv) > 3:
+        MaxIters = int(argv[3])
+    outputPrefix = ""
+    if len(argv) > 4:
+        outputPrefix = argv[4]
     xmesh = PolyMesh()
     print "Loading %s..."%xmeshfile
     (xmesh.VPos, xmesh.VColors, xmesh.ITris) = loadOffFileExternal(xmeshfile)
@@ -407,5 +398,5 @@ if __name__ == '__main__':
     (ymesh.VPos, ymesh.VColors, ymesh.ITris) = loadOffFileExternal(ymeshfile)
     ymesh.performDisplayUpdate(True)
     
-    viewer = ICPViewerCanvas(xmesh, ymesh)
+    viewer = ICPViewerCanvas(xmesh, ymesh, MaxIters, outputPrefix)
     viewer.initGL()

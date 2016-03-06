@@ -16,8 +16,22 @@ import os
 import math
 import time
 from time import sleep
+import numpy as np
 import matplotlib.pyplot as plt
 from ICP import *
+
+def saveImageGL(mvcanvas, filename, w, h):
+    view = glGetIntegerv(GL_VIEWPORT)
+    pixels = glReadPixels(0, 0, view[2], view[3], GL_RGB,
+                     GL_UNSIGNED_BYTE)
+    I = np.fromstring(pixels, dtype=np.dtype('<b'))
+    I = np.reshape(I, (h, w, 3))
+    for k in range(3):
+        I[:, :, k] = np.flipud(I[:, :, k])
+    plt.imshow(I/255.0)
+    plt.axis('off')
+    plt.savefig(filename, dpi = 150, bbox_inches='tight')
+    plt.clf()
 
 class ICPViewerCanvas(object):
     def __init__(self, xmesh, ymesh, MaxIters = 200, outputPrefix = ""):
@@ -303,7 +317,7 @@ class ICPViewerCanvas(object):
         if self.animating:
             if not(self.outputPrefix == ""):
                 #Ouptut screenshots
-                saveImageGL(self, "%s%i.png"%(prefix, self.outputPrefix))
+                saveImageGL(self, "%s%i.png"%(self.outputPrefix, self.frameIdx), self.GLUTwindow_width, self.GLUTwindow_height)
             self.frameIdx += 1
             if self.frameIdx == len(self.RxList):
                 self.animating = False

@@ -20,7 +20,7 @@ def getCentroid(PC):
 #Cy: 3 x 1 matrix of the centroid of corresponding points in Y
 #Rx: Current estimate of rotation matrix for X
 #Returns:
-#idx: An array of size N which stores the indices 
+#idx: An array of size M which stores the indices 
 def getCorrespondences(X, Y, Cx, Cy, Rx):
     #TODO: Update this: Right now everything maps to the first point in Y
     return np.zeros(X.shape[1], dtype=np.int64) #dummy value

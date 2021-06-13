@@ -1,0 +1,292 @@
+<!-- Start of Header Code -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<link rel="stylesheet" type="text/css" href="../../main.css" />
+<link rel="icon" href="../../../favicon.ico" type="image/x-icon"/>
+<link rel="shortcut icon" href="../../../favicon.ico" type="image/x-icon"/>
+<!--LaTeX in Javascript!-->
+<script src="../../../../jsMath/easy/load.js"></script>
+<!--Syntax highlighting in Javascript!-->
+<script type="text/javascript" src="../../../../syntaxhighlighter/scripts/shCore.js"></script>
+<script type="text/javascript" src="../../../syntaxhighlighter/scripts/shBrushJScript.js"></script>
+<script type="text/javascript" src="../../../../syntaxhighlighter/scripts/shBrushCpp.js"></script>
+<script type="text/javascript" src="../../../../syntaxhighlighter/scripts/shBrushMatlabSimple.js"></script>
+<script type="text/javascript" src="../../../../syntaxhighlighter/scripts/shBrushPython.js"></script>
+<link type="text/css" rel="stylesheet" href="../../../../syntaxhighlighter/styles/shCoreDefault.css"/>
+<script type="text/javascript">SyntaxHighlighter.all();</script>
+<title>COMPSCI/MATH 290: Digital 3D Geometry Spring 2016</title>
+</head>
+<body>
+<div id="wrapper">
+
+<div id="menu-bar">
+<center><h1>COMPSCI/MATH 290: Spring 2016</h1></center>
+<ul class="menus-level0">
+<li><a href="../../index.html">General</a></li>
+<li><a href = "../../syllabus.html">Syllabus</a></li>
+<li><a href = "../../assignments.html">Assignments</a></li>
+<li><a href = "../../finalproject.html">Final Project</a></li>
+<li><a href = "../../raffle.html">Raffle</a></li>
+</ul>
+</div>
+<!-- End of Header Code -->
+
+<div id="page-content">
+<h1>Mini Assignment 3: Iterative Closest Points (55 Points)</h1>
+<h2>By <a href = "http://www.ctralie.com">Chris Tralie</a></h2>
+
+<h2><a href = "ArtContest">Click here</a> to see art contest results!</h2>
+
+<ul>
+<li><a href = "#overview">Overview</a></li>
+<li><a href = "#code">Getting Started / Codebase</a>
+<ul>
+<li><a href = "#glut">Alternative GLUT GUI</a></li>
+<li><a href = "#install">Additional Installation Instructions</a></li>
+</ul>
+</li>
+<li><a href = "#algorithm">Algorithm Implementation</a>
+<ul>
+<li><a href = "#pysetup">Python Setup (5 Points)</a></li>
+<li><a href = "#centroid">Compute Centroid of A Point Cloud (5 Points)</a></li>
+<li><a href = "#nn">Brute Force Nearest Neighbor Correspondences (15 points)</a></li>
+<li><a href = "#Procrustes">Procrustes Alignment (10 points)</a></li>
+<li><a href = "#icp">Perform Iterative Closest Points (10 points)</a></li>
+<li><a href = "#testing">Testing (5 Points)</a></li>
+<li><a href = "#art">Additional Example / Art Contest (5 Points)</a></li>
+</ul>
+</li>
+</ul>
+
+<h2><a name = "overview">Overview</a></h2>
+<p>
+The purpose of this assignment is to get students hands on experience computing Procrustes Distance/Alignment and performing the Iterative Closest Points (ICP) algorithm (see <a href = "../../Lectures/13_ICP/slides.pdf">Lecture 13 slides</a> for more details).  Because of the timing and the subject matter, this can be thought of as the programming part of the midterm, though it will still be grouped in and weighted in the Programming Assignments category
+</p>
+
+<p>
+The code in this assignment is overall very short compared to other assignments you have done so far, but you need to be very careful about the finer points of matrix dimensions, transposes, and multiplication order to get this to work properly.  This will also give everyone a first exposure to using numpy with geometry, which is needed in group assignment 2.  Please have a look at the <a href = "https://github.com/COMPSCI290-S2016/NumpyDemos">numpy demos</a> we went over in class for some tricks that might help in this assignment and the next one.
+</p>
+
+<h3><u>Due Date</u></h3>
+<p>
+This assigment is due at <b>11:55PM on Sunday 3/13</b>.  The first 5 points, which are setting up Python and taking a screenshot, are due on <b>Wednesday 3/9</b>, no exceptions and no partial credit (to make sure people are on track to setting up their Python environment).
+</p>
+
+<p>
+Once you are finished, zip up your code and the sequence of images you generated in the <a href = "#art">examples</a> section.  Please also include a README with observations in the <a href = "#testing">testing</a> and <a href = "#art">examples</a> sections, as well as any comments on the assignment and how many hours it took you.
+</p>
+
+<BR><BR><HR>
+
+<h2><a name = "code">Getting Started / Codebase</a></h2>
+<h3>Getting Started</h3>
+To get started, first download the code
+<h3><a href = "Mini3_ICP.zip">Mini3_ICP.zip</a></h3>
+<p>
+To run the code, you will first need to make sure you have <b>Python 2.7</b> installed, as well as some packages.  The packages you need are
+<ul>
+<li>The <a href = "http://www.scipy.org/install.html">scipy stack</a></li>
+<li><a href = "http://pyopengl.sourceforge.net/">PyOpenGL</a></li>
+<li><a href = "http://www.wxpython.org/download.php">wxPython</a> (Under windows I have had more success with the 32 bit version)</li>
+</ul>
+
+If you're running Ubuntu, you can simply issue the command <BR><BR>
+<code>
+sudo apt-get install python-numpy python-scipy python-matplotlib python-opengl python-wxtools
+</code><BR><BR>
+to install everything
+<BR><BR>
+
+If you're starting with a fresh install of Python 2.7, you can make it easier on yourself by downloading the <a href = "https://www.continuum.io/downloads">Anaconda Distribution</a>, which comes wrapped with the scipy stack, as well as a very handy debugging tool known as <a href = "http://ipython.org/install.html">ipython</a>.  You will still need to install PyOpenGL and wxPython.
+</p>
+
+<p>
+Once you have these packages installed, you can run the file <b><code>ICPView.py</code></b>, which is the entry point to running your code, which will be implemented in the file <b><code>ICP.py</code></b>.  <code>ICPView.py</code> takes two command line arguments.  The first argument is the path to the mesh that you want to aligned (referred to as "mesh <b>X</b>" from now on), and the second argument is the path to "target mesh" to which the first mesh will be aligned (called "mesh <b>Y</b>" or the "target mesh" from now on).  For instance, if you run
+
+
+<script type="syntaxhighlighter" class="brush: matlabkey"><![CDATA[
+python ICPView.py meshes/chrishead.off meshes/cow.off
+]]></script>
+
+then you should see something like this:<BR><BR>
+
+<img src = "GUIScreenshot.png"><BR><BR>
+
+This GUI will help you to debug your code as you write it by showing you what correspondences you have found between two shapes, as well as what your Procrustes alignment step is doing.  Left click + drag to rotate the camera, center click + drag to translate, and right click + drag to zoom.  You can also compute an entire run of the ICP algorithm and play it back as an animation, and if you enter something into the text field "output prefix," then the program will output a sequence of PNG images that make up the movie.  For example, here's what a working implementation would look like aligning the mesh <code>candide.off</code> to the mesh <code>NotreDameFrontHalf.off</code><BR><BR>
+
+<table border = "1">
+<tr><td><h2><a href = 'candide2NotreDame.ogg'>candide2NotreDame.ogg</a></h2></td></tr>
+<tr><td>An example of aligning <code>candide.off</code> to <code>NotreDameFrontHalf.off</code></td></tr>
+<tr><td>
+<video width = 800 height = 600 controls>
+  <source src='candide2NotreDame.ogg' type="video/ogg">
+Your browser does not support the video tag.
+</video>
+</td></tr>
+</table><BR><BR>
+
+</p>
+
+<h2><a name = "glut">Alternative GLUT GUI</a></h2>
+
+As some people discovered the hard way, wxPython isn't well supported on all new operating systems, especially Mac ones.  To help with this, there is an alternative GUI that you can use called <b><code>ICPViewGLUT.py</code></b>.  There are no textbox inputs enabled in this GUI, so you will have to pass a few more parameters along in the command line.  The usage is as follows:
+
+<script type="syntaxhighlighter" class="brush: matlabkey"><![CDATA[
+python ICPViewGLUT.py <mesh1> <mesh2> [Max Iterations] [File Prefix]
+]]></script>
+
+For example
+
+<script type="syntaxhighlighter" class="brush: matlabkey"><![CDATA[
+python ICPViewGLUT.py meshes/candide.off meshes/NotreDameFrontHalf.off 200 candide
+]]></script>
+
+Will start the program with the candide mesh and the Notre Dame mesh, capping ICP at a 200 iterations and saving the video frames with the prefix "candide."  The GUI controls are as follows (most of the checkboxes and menu items in the ordinary GUI have been replaced with keyboard shortcuts)
+
+<ul>
+<li>Left Click + Drag: Rotate Camera</li>
+<li>Center Click + Drag: Translate Camera</li>
+<li>Hold <b>Z</b> Key + Left Click + Drag: Zoom Camera</li>
+<li><b>X</b> Key: Center on first mesh</li>
+<li><b>Y</b> Key: Center on second mesh</li>
+<li><b>P</b> Key: Toggle displaying points</li>
+<li><b>E</b> Key: Toggle displaying edges</li>
+<li><b>F</b> Key: Toggle displaying faces</li>
+<li><b>C</b> Key: Toggle displaying correspondences</li>
+<li>Right Click: Bring up menu for doing ICP steps and animations</li>
+</ul>
+
+Below is a screenshot of this working:<BR>
+<img src = "GLUTScreenshot.png"><BR><BR>
+
+<b>NOTE: GLUT seems to have some problems on Windows 10, but the 32 bit version of wxPython for Python 2.7 seems to work fine, so try that first</b>
+
+<BR>
+<h2><a name = "install">Additional Installation Instructions</a></h2>
+
+<ul>
+<li>For those who are having trouble with PyOpenGL and who installed it using pip, it's possible that the pip repository or installer is corrupted.  Uninstall PyOpenGL (<code>pip uninstall PyOpenGL PyOpenGL-accelerate</code>)and try installing it instead from source.  You'll have to download the three packages from here<BR><BR>
+
+<a href = "https://pypi.python.org/pypi/PyOpenGL/3.1.1a1">https://pypi.python.org/pypi/PyOpenGL/3.1.1a1</a>
+<BR><BR>
+ 
+
+<a href = "https://pypi.python.org/pypi/PyOpenGL-accelerate/3.1.1a1">https://pypi.python.org/pypi/PyOpenGL-accelerate/3.1.1a1</a><BR><BR>
+
+ 
+
+<a href = "https://pypi.python.org/pypi/OpenGLContext">https://pypi.python.org/pypi/OpenGLContext</a><BR><BR>
+
+ 
+
+unextract each one, and in each directory type "python setup.py install"<BR><BR>
+<li>
+For those who are having trouble importing wxpython while using Anaconda Python, this may be because the wxpython module is not installed in the correct place. To make sure it is installed with anaconda type:
+
+<BR><BR>
+<code>
+conda install -c https://conda.anaconda.org/anaconda wxpython
+</code>
+<BR><BR>
+
+into the terminal.<BR><BR>
+
+You may have another problem that says "please run with a Framework build of python etc...".  Not sure why, but when you use pythonw instead of just python before the file name this second problem goes away.
+</li>
+
+
+</ul>
+
+
+<BR><BR><HR>
+
+<h2><a name = "algorithm">Algorithm Implementation</a></h2>
+
+NOTE: The convention in this assignment is that all point clouds are in <b>3 x N</b> matrices with points along the columns.
+
+<h3><a name = "pysetup">Python Setup (5 Points)</a></h3>
+As a first step, please setup all of the software packages for Python, as explained above.  E-mail Chris with a screenshot of <code>ICPViewer.py</code> running by <b>Wednesday 3/9</b>.  All or nothing on these points by that date
+
+<h3><a name = "centroid">Compute Centroid of A Point Cloud (5 Points)</a></h3>
+
+Fill in the method <code><b>getCentroid(PC)</b></code> in <code>ICP.py</code> to compute the centroid of a point cloud, where the points are along the columns of a <b>3 x N</b> matrix.  So you should return a <b>3 x 1</b> matrix representing the centroid.  This should be one line of code (hint: use <code>np.mean()</code> along some axis).  You can test to make sure it's working properly in <code>ICPViewer</code> by loading two shapes and clicking the "center meshes on centroids" button (Note that this is not exactly what happens in Procrustes alignment, since the centroids of the target mesh are computed on corresponding points only, but it can help you make sure your centroid step is correct).  After the centroids are computed, be sure to re-center the camera by clicking the "Y Mesh" or the "X Mesh" views buttons.<BR><BR>
+
+<h3><a name = "nn">Brute Force Nearest Neighbor Correspondences (15 points)</a></h3>
+Fill in the method <code><b>getCorrespondences(X, Y, Cx, Cy, Rx)</b></code> in <code>ICP.py</code>.  That is, given a centroid estimate for point clouds X and Y and a rotation matrix to align X with Y after centering both on their centroids, you need to compute the nearest neighbors on mesh Y to every point in mesh X.  <a href = "https://github.com/COMPSCI290-S2016/NumpyDemos/blob/master/NearestNeighborBrute.py">This example</a> from class may be of some help.  To complete that example, you need to fill in a matrix <b>D</b> where <b>D[i, j]</b> is the Euclidean or squared Euclidean distance between point <b>i</b> in <b>X</b> and point <b>j</b> in <b>Y</b>, and that code computes the index of the minimum distance along each row.  You can use the "find correspondences" button in the GUI to help debug this:<BR><BR>
+
+<img src = "Correspondences.png"><BR><BR>
+
+This can all be done without any for loops.  <i>If you use a for loop in this function, you can only earn a maximum of <b>10/15 points</b></i>.  Try to think of how to write all distances from points in X to points in Y as the sum of broadcast matrices and a matrix multiplication, following the hint on the <a href = "../../Lectures/15_HighDim_Numpy/slides.pdf">second to last slide of lecture 15</a> (as well as the other numpy examples), and remembering that matrix multiplication is just a bunch of dot products.  Your code will be substantially faster if you can avoid a for loop, since numpy matrix multiplication has been written and complied in C.  (Of course if you find another way to do this without for loops leveraging numpy, that is also completely acceptable)<BR><BR>
+
+<h3><a name = "Procrustes">Procrustes Alignment (10 points)</a></h3>
+Now that you have correspondences, you can compute the Procrustes alignment between two meshes.  Fill in <code><b>getProcrustesAlignment(X, Y, idx)</b></code>.  To do this, you need to
+<ul>
+<li>Compute the centroid of the points in mesh X</li>
+<li>Compute the centroid of the corresponding points in mesh Y</li>
+<li>After centering each point cloud on its centroid, compute the optimal 3D rotation to get the X points to the Y points</li>
+</ul>
+
+The command <code><b>np.linalg.svd</b></code> should come in handy here.  Recall from <a href = "../../Lectures/13_ICP/slides.pdf">lecture 13</a> that the SVD factorization of the matrix <b>AB<SUP>T</SUP></b>, ignoring the scaling matrix, gives you the optimal rotation matrix to rotate point cloud <b>B</b> to align with point cloud <b>A</b>.
+
+<BR>
+<b>NOTE: np.linalg.svd returns a tuple (U, S, V<SUP>T</SUP>), so the V matrix is already transposed! (tricky!)</b>
+
+
+<h3><a name = "icp">Perform Iterative Closest Points (10 points)</a></h3>
+
+Now that you have the two key steps of ICP implemented (correspondence finding and alignment), you can put them together in a loop and iterate the process.  That is, go through the following loop
+<ol>
+<li>Given the current estimate of centroids and optimal rotation, compute correspondences</li>
+<li>Given correspondences, re-compute the centroids and optimal rotation.  Go back to step 1 and repeat</li>
+</ol>
+ Fill in <b><code>doICP(X, Y, MaxIters)</code></b>.  You should loop as long as the correspondences are all different from the correspondences you got last time.  If they are the same, this means that the process has converged.  Again, you can check for this without using a loop (<b>you will lose 2 points if you check this with a loop: try, for instance, using some boolean condition and <code>np.sum()</code></b>).  You only have to loop up to the maximum number of iterations, regardless of convergence.
+
+<h3><a name = "testing">Testing (5 Points)</a></h3>
+
+To make sure your program is working, test it on the example shown above and make sure the "candide" face aligns well to the Notre Dame statue head (replace <code>ICPView.py</code> with <code>ICPViewGLUT.py</code> if you're using that):
+<script type="syntaxhighlighter" class="brush: matlabkey"><![CDATA[
+python ICPView.py meshes/candide.off meshes/NotreDameFrontHalf.off
+]]></script>
+
+Next, try doing this the other way around; that is, aligning 
+<script type="syntaxhighlighter" class="brush: matlabkey"><![CDATA[
+python ICPView.py meshes/NotreDameFrontHalf.off meshes/candide.off
+]]></script>
+
+What do you notice?  Why is this happening? What does this say about the symmetry (or lack thereof) of the ICP algorithm?
+
+<h3><a name = "art">Additional Example / Art Contest (5 Points)</a></h3>
+
+<p>
+In addition to aligning the face model to the statue, you should try this out on other examples.  A variety of meshes are included in the <code>meshes/</code> directory in the code distribution.  Please submit with your assignment a sequence of images that show your program in action aligning one of those meshes to another one, by filling in a string in the "Output Prefix" field before clicking "Animate ICP" (or in the GLUT GUI by providing a fourth command line argument of that prefix).  Note that you can move the camera before or during the animation to get a better view.
+</p>
+
+<p>
+If you are creative about what you align to what, you can probably create some interesting concepts.  Therefore, if you would like, you can also choose to submit your alignment video to the art contest for this assignment.  Please indicate that you would like to submit your example and whether or not I can include your name on the course web site (and if not what your pseudonym should be).  The winner will get <b>two raffle points</b>.  Feel free to use any of the meshes in the <a href = "http://segeval.cs.princeton.edu/">Princeton Shape Database</a> as you did for the image source assignment.  
+</p>
+
+<p>
+Finally, there has been a script provided that facilitates changing the geometry of different meshes before you align them.  Check out the file <code>manipulateGeometry.py</code>.  That example shows applying a random rotation to an .off file, but you can do anything you want.  Remember that the initial guess has a huge effect on ICP, so if you choose a different position or orientation that will influence where the algorithm converges
+</p>
+
+</div>
+
+<!-- Start of StatCounter Code -->
+<script type="text/javascript">
+var sc_project=7309088; 
+var sc_invisible=1; 
+var sc_security="f655b56d"; 
+</script>
+<script type="text/javascript"
+src="http://www.statcounter.com/counter/counter.js"></script>
+<noscript><div class="statcounter"><a title="free hit counter"
+href="http://statcounter.com/" target="_blank"><img class="statcounter"
+src="http://c.statcounter.com/7309088/0/f655b56d/1/" alt="free hit
+counter"></a></div></noscript>
+<!-- End of StatCounter Code -->
+
+</body>
+</html>
+
+
+
